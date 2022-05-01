@@ -1,4 +1,4 @@
-import { Issue, Repository, User } from "@octokit/webhooks-types";
+import { Issue, Repository, User } from "../models/models.ts";
 
 import octokit from "../actions/utils/octokit.ts";
 

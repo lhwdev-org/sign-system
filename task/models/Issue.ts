@@ -4,7 +4,7 @@ import { User } from "./User.ts";
 
 export interface IssueUpdateData {
   title: string;
-  body: string;
+  body?: string;
 
   labels: Label[];
 
@@ -13,7 +13,7 @@ export interface IssueUpdateData {
 
 export interface Issue extends IssueUpdateData {
   number: number;
-  user: User;
+  user?: User;
 
   update(data?: Partial<IssueUpdateData>): Promise<void>;
 
@@ -37,7 +37,9 @@ export interface IssueCommentUpdateData {
 }
 
 export interface IssueComment extends IssueCommentUpdateData {
-  user: User;
+  user?: User;
 
-  update(data: Partial<IssueCommentUpdateData>): Promise<void>;
+  update(
+    data: Partial<IssueCommentUpdateData> & { body: string },
+  ): Promise<void>;
 }

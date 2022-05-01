@@ -1,54 +1,56 @@
 import {
-  Issue as GhIssue,
-  Label as GhLabel,
-  Repository as GhRepository,
-} from "@octokit/webhooks-types";
-import { components } from "@octokit/openapi-types";
-
-import { Issue, IssueComment, IssueUpdateData, Label } from "../../issue.ts";
+  Issue,
+  IssueComment,
+  IssueCommentUpdateData,
+  IssueUpdateData,
+  Label,
+} from "../../issue.ts";
 import { User } from "../../User.ts";
 
-import octokit from "../../../actions/utils/octokit.ts";
+import { GhIssue, GhIssueComment, GhRepository } from "./_types.ts";
+import { GithubModel, GithubModelManager } from "./GithubModel.ts";
 import { GithubUser } from "./GithubUser.ts";
 
-export class GithubIssue implements Issue {
+export class GithubIssue extends GithubModel implements Issue {
   number!: number;
-  user: User;
+  user?: User;
 
   title!: string;
-  body!: string;
+  body?: string;
 
   labels!: Label[];
   isOpen!: boolean;
 
-  private baseParameter!: { owner: string; repo: string; issue_number: number };
+  private baseParameter: { owner: string; repo: string; issue_number: number };
 
-  constructor(public original: GhIssue, public repository: GhRepository) {
-    this.updateFrom(original);
-    this.user = new GithubUser(original.user);
-  }
-
-  updateFrom(data: GhIssue) {
-    this.number = data.number;
-    this.title = data.title;
-    this.body = data.body ?? "";
-    this.labels = data.labels ?? [];
-    this.isOpen = data.state == "open";
+  constructor(
+    private _manager: GithubModelManager,
+    public original: GhIssue,
+    public repository: GhRepository,
+  ) {
+    super();
 
     this.baseParameter = {
       owner: this.repository.owner.login,
       repo: this.repository.name,
-      issue_number: data.number,
+      issue_number: original.number,
     };
+
+    this.updateFrom(original);
+    if (original.user) this.user = new GithubUser(this.manager, original.user);
   }
 
-  updateFromResult(data: components["schemas"]["issue"]) {
+  public override get manager(): GithubModelManager {
+    return this._manager;
+  }
+
+  updateFrom(data: GhIssue) {
     this.title = data.title;
     this.body = data.body ?? this.body;
 
     const labels = [];
     for (const label of data.labels) {
-      if (typeof label === "object") labels.push(label as GhLabel);
+      if (typeof label === "object") labels.push(label as Label);
       else throw Error("I didn't expect this");
     }
     this.labels = labels;
@@ -58,12 +60,12 @@ export class GithubIssue implements Issue {
 
   async update(data?: Partial<IssueUpdateData>): Promise<void> {
     if (!data) {
-      const result = await octokit.rest.issues.get(this.baseParameter);
-      this.updateFromResult(result.data);
+      const result = await this.octokit.issues.get(this.baseParameter);
+      this.updateFrom(result.data);
       return;
     }
 
-    const result = await octokit.rest.issues.update({
+    const result = await this.octokit.issues.update({
       ...this.baseParameter,
       title: data.title,
       body: data.body,
@@ -73,7 +75,7 @@ export class GithubIssue implements Issue {
         : (data.isOpen ? "open" : "closed"),
     });
 
-    this.updateFromResult(result.data);
+    this.updateFrom(result.data);
   }
 
   async open(): Promise<boolean> {
@@ -87,5 +89,51 @@ export class GithubIssue implements Issue {
   }
 
   async addComment(body: string): Promise<IssueComment> {
+    const result = await this.octokit.issues.createComment({
+      ...this.baseParameter,
+      body,
+    });
+    const comment = new GithubIssueComment(result.data, this);
+    if (!comment.user) comment.user = await this.manager.me();
+    comment.updateFrom(result.data);
+    return comment;
+  }
+}
+
+export class GithubIssueComment extends GithubModel implements IssueComment {
+  user?: GithubUser;
+  body!: string;
+
+  private baseParameter!: { owner: string; repo: string; comment_id: number };
+
+  constructor(public original: GhIssueComment, public fromIssue: GithubIssue) {
+    super();
+
+    if (original.user) this.user = new GithubUser(this.manager, original.user);
+    this.body = original.body!;
+  }
+
+  public get manager(): GithubModelManager {
+    return this.fromIssue.manager;
+  }
+
+  updateFrom(data: GhIssueComment) {
+    this.body = data.body ?? this.body;
+  }
+
+  async update(
+    data?: Partial<IssueCommentUpdateData> & { body: string },
+  ): Promise<void> {
+    if (!data) {
+      const result = await this.octokit.issues.getComment(this.baseParameter);
+      this.updateFrom(result.data);
+      return;
+    }
+
+    const result = await this.octokit.issues.updateComment({
+      ...this.baseParameter,
+      ...data,
+    });
+    this.updateFrom(result.data);
   }
 }
