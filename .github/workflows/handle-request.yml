@@ -6,7 +6,11 @@ on:
       - reopened
 
 jobs:
-  publish:
+  handle-request:
+    permissions:
+      contents: write
+      issues: write
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -17,6 +21,6 @@ jobs:
         with:
           deno-version: v1.x
 
-      - name: Minify and Publish files
+      - name: Handle Signing Request
         # https://github.com/octokit/octokit.js/issues/2075 : temporary remove check
         run: deno run --no-check=remote --allow-all --quiet repo/task/actions/on-handle-request.ts repo ${{ github.token }}
