@@ -14,13 +14,20 @@ import {
   IssuesReopenedEvent,
 } from "@octokit/webhooks-types";
 
+import { warning } from "./utils/core/core.ts";
 import { context } from "./utils/github/github.ts";
-import { initOctokit } from "./utils/octokit.ts";
-import onHandleRequest from "../on-request/main.ts";
+import { initOctokit } from "./utils/octokit-init.ts";
 
 const [filePath, githubToken] = Deno.args;
 initOctokit(githubToken);
 
 const payload = context.payload as (IssuesOpenedEvent | IssuesReopenedEvent);
 
+// checked from workflow yaml, but check once more
+if (!payload.issue.labels?.find((label) => label.name === "sign-request")) {
+  warning("This issue do not have 'sign-request' label");
+  Deno.exit(0);
+}
+
+const onHandleRequest = (await import("../on-request/main.ts")).default;
 onHandleRequest(payload.repository, payload.issue, payload.sender, filePath);

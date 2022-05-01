@@ -25,14 +25,12 @@ export class Context {
    */
   constructor() {
     this.payload = {};
-    if (Deno.env.get("GITHUB_EVENT_PATH")) {
+    const payloadPath = Deno.env.get("GITHUB_EVENT_PATH");
+    if (payloadPath) {
       try {
-        this.payload = JSON.parse(
-          Deno.readTextFileSync(Deno.env.get("GITHUB_EVENT_PATH")!),
-        );
+        this.payload = JSON.parse(Deno.readTextFileSync(payloadPath));
       } catch (_) {
-        const path = Deno.env.get("GITHUB_EVENT_PATH");
-        console.log(`GITHUB_EVENT_PATH ${path} does not exist`);
+        console.log(`GITHUB_EVENT_PATH ${payloadPath} does not exist`);
       }
     }
     this.eventName = Deno.env.get("GITHUB_EVENT_NAME")!;
@@ -46,7 +44,8 @@ export class Context {
     this.runId = parseInt(Deno.env.get("GITHUB_RUN_ID")!, 10);
     this.apiUrl = Deno.env.get("GITHUB_API_URL") ?? `https://api.github.com`;
     this.serverUrl = Deno.env.get("GITHUB_SERVER_URL") ?? `https://github.com`;
-    this.graphqlUrl = Deno.env.get("GITHUB_GRAPHQL_URL") ?? `https://api.github.com/graphql`;
+    this.graphqlUrl = Deno.env.get("GITHUB_GRAPHQL_URL") ??
+      `https://api.github.com/graphql`;
   }
 
   get issue(): { owner: string; repo: string; number: number } {
