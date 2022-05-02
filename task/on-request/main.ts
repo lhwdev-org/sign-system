@@ -8,5 +8,4 @@ export default function onHandleRequest(
   sender: User,
   filePath: string,
 ) {
-  octokit.rest.issues.updateComment({});
 }

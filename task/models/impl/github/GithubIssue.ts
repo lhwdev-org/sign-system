@@ -7,9 +7,10 @@ import {
 } from "../../issue.ts";
 import { User } from "../../User.ts";
 
-import { GhIssue, GhIssueComment, GhRepository } from "./_types.ts";
+import { GhIssue, GhIssueComment } from "./_types.ts";
 import { GithubModel, GithubModelManager } from "./GithubModel.ts";
 import { GithubUser } from "./GithubUser.ts";
+import { GithubRepository } from "./GithubRepository.ts";
 
 export class GithubIssue extends GithubModel implements Issue {
   number!: number;
@@ -24,15 +25,14 @@ export class GithubIssue extends GithubModel implements Issue {
   private baseParameter: { owner: string; repo: string; issue_number: number };
 
   constructor(
-    private _manager: GithubModelManager,
     public original: GhIssue,
-    public repository: GhRepository,
+    public repository: GithubRepository,
   ) {
     super();
 
     this.baseParameter = {
-      owner: this.repository.owner.login,
-      repo: this.repository.name,
+      owner: this.repository.original.owner.login,
+      repo: this.repository.original.name,
       issue_number: original.number,
     };
 
@@ -41,7 +41,7 @@ export class GithubIssue extends GithubModel implements Issue {
   }
 
   public override get manager(): GithubModelManager {
-    return this._manager;
+    return this.repository.manager;
   }
 
   updateFrom(data: GhIssue) {
@@ -106,7 +106,7 @@ export class GithubIssueComment extends GithubModel implements IssueComment {
 
   private baseParameter!: { owner: string; repo: string; comment_id: number };
 
-  constructor(public original: GhIssueComment, public fromIssue: GithubIssue) {
+  constructor(public original: GhIssueComment, public issue: GithubIssue) {
     super();
 
     if (original.user) this.user = new GithubUser(this.manager, original.user);
@@ -114,7 +114,7 @@ export class GithubIssueComment extends GithubModel implements IssueComment {
   }
 
   public get manager(): GithubModelManager {
-    return this.fromIssue.manager;
+    return this.issue.manager;
   }
 
   updateFrom(data: GhIssueComment) {
