@@ -6,4 +6,5 @@ export default async function onHandleRequest(
   sender: User,
   filePath: string,
 ) {
+  const body = issue.body!;
 }

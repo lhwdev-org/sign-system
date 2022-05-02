@@ -1,8 +1,8 @@
 {
   "imports": {
-    "fs": "https://deno.land/std@0.128.0/fs/mod.ts",
-    "path": "https://deno.land/std@0.128.0/path/mod.ts",
-    "io": "https://deno.land/std@0.128.0/io/mod.ts",
+    "fs": "https://deno.land/std@0.137.0/fs/mod.ts",
+    "path": "https://deno.land/std@0.137.0/path/mod.ts",
+    "io": "https://deno.land/std@0.137.0/io/mod.ts",
     "@octokit/core": "https://cdn.skypack.dev/@octokit/core?dts",
     "@octokit/plugin-rest-endpoint-methods": "https://cdn.skypack.dev/@octokit/plugin-rest-endpoint-methods?dts",
     "@octokit/plugin-paginate-rest": "https://cdn.skypack.dev/@octokit/plugin-paginate-rest?dts",
