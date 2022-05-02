@@ -14,9 +14,9 @@ import {
   IssuesReopenedEvent,
 } from "@octokit/webhooks-types";
 
-import { warning } from "./utils/core/core.ts";
-import { context } from "./utils/github/github.ts";
-import { initOctokit } from "./utils/octokit-init.ts";
+import { warning } from "../utils/core/core.ts";
+import { context } from "../utils/github/github.ts";
+import { initOctokit } from "../utils/octokit-init.ts";
 
 const [filePath, githubToken] = Deno.args;
 initOctokit(githubToken);
@@ -29,5 +29,4 @@ if (!payload.issue.labels?.find((label) => label.name === "sign-request")) {
   Deno.exit(0);
 }
 
-const onHandleRequest = (await import("../on-request/main.ts")).default;
-onHandleRequest(payload.repository, payload.issue, payload.sender, filePath);
+(await import("./main.ts")).default(payload, filePath);

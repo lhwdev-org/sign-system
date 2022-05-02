@@ -25,4 +25,4 @@ jobs:
 
       - name: Handle Signing Request
         # https://github.com/octokit/octokit.js/issues/2075 : temporary remove check
-        run: deno run --no-check=remote --allow-all --quiet repo/task/actions/on-handle-request.ts repo ${{ github.token }}
+        run: deno run --no-check=remote --allow-all --quiet repo/task/actions/handle-request/mod.ts repo ${{ github.token }}

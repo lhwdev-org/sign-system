@@ -11,10 +11,12 @@ export interface IssueUpdateData {
   isOpen: boolean;
 }
 
-export interface Issue extends IssueUpdateData {
+export interface IssueData extends IssueUpdateData {
   number: number;
   user?: User;
+}
 
+export interface Issue extends IssueData {
   update(data?: Partial<IssueUpdateData>): Promise<void>;
 
   open(): Promise<boolean>;
@@ -36,9 +38,12 @@ export interface IssueCommentUpdateData {
   body: string;
 }
 
-export interface IssueComment extends IssueCommentUpdateData {
-  user?: User;
+export interface IssueCommentData extends IssueCommentUpdateData {
+  id: number;
+  user: User;
+}
 
+export interface IssueComment extends IssueCommentData {
   update(
     data: Partial<IssueCommentUpdateData> & { body: string },
   ): Promise<void>;
