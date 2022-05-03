@@ -1,4 +1,3 @@
-import { IHttpClientResponse } from "@actions/http-client/interfaces";
 import {
   displayHttpDiagnostics,
   getExponentialRetryTimeInMilliseconds,
@@ -11,11 +10,11 @@ import { getRetryLimit } from "./config-variables.ts";
 
 export async function retry(
   name: string,
-  operation: () => Promise<IHttpClientResponse>,
+  operation: () => Promise<Response>,
   customErrorMessages: Map<number, string>,
   maxAttempts: number,
-): Promise<IHttpClientResponse> {
-  let response: IHttpClientResponse | undefined = undefined;
+): Promise<Response> {
+  let response: Response | undefined = undefined;
   let statusCode: number | undefined = undefined;
   let isRetryable = false;
   let errorMessage = "";
@@ -25,7 +24,7 @@ export async function retry(
   while (attempt <= maxAttempts) {
     try {
       response = await operation();
-      statusCode = response.message.statusCode;
+      statusCode = response.status;
 
       if (isSuccessStatusCode(statusCode)) {
         return response;
@@ -71,9 +70,9 @@ export async function retry(
 
 export async function retryHttpClientRequest(
   name: string,
-  method: () => Promise<IHttpClientResponse>,
+  method: () => Promise<Response>,
   customErrorMessages: Map<number, string> = new Map(),
   maxAttempts = getRetryLimit(),
-): Promise<IHttpClientResponse> {
+): Promise<Response> {
   return await retry(name, method, customErrorMessages, maxAttempts);
 }

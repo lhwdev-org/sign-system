@@ -1,6 +1,4 @@
-import * as fs from "fs";
 import * as core from "../../core/core.ts";
-import * as zlib from "https://deno.land/x/compress@v0.3.3/zlib/mod.ts";
 import {
   displayHttpDiagnostics,
   getArtifactUrl,
@@ -16,14 +14,12 @@ import {
 } from "./utils.ts";
 import { StatusReporter } from "./status-reporter.ts";
 import { ListArtifactsResponse, QueryArtifactResponse } from "./contracts.ts";
-import { IHttpClientResponse } from "@actions/http-client/interfaces";
 import { HttpManager } from "./http-manager.ts";
 import { DownloadItem } from "./download-specification.ts";
 import {
   getDownloadFileConcurrency,
   getRetryLimit,
 } from "./config-variables.ts";
-import { IncomingHttpHeaders } from "http";
 import { retryHttpClientRequest } from "./requestUtils.ts";
 
 export class DownloadHttpClient {
@@ -51,10 +47,9 @@ export class DownloadHttpClient {
     const headers = getDownloadHeaders("application/json");
     const response = await retryHttpClientRequest(
       "List Artifacts",
-      async () => client.get(artifactUrl, headers),
+      async () => await client(artifactUrl, { headers }),
     );
-    const body: string = await response.readBody();
-    return JSON.parse(body);
+    return await response.json();
   }
 
   /**
@@ -75,10 +70,9 @@ export class DownloadHttpClient {
     const headers = getDownloadHeaders("application/json");
     const response = await retryHttpClientRequest(
       "Get Container Items",
-      async () => client.get(resourceUrl.toString(), headers),
+      async () => await client(`${resourceUrl}`, { headers }),
     );
-    const body: string = await response.readBody();
-    return JSON.parse(body);
+    return await response.json();
   }
 
   /**
@@ -150,21 +144,20 @@ export class DownloadHttpClient {
   ): Promise<void> {
     let retryCount = 0;
     const retryLimit = getRetryLimit();
-    let destinationStream = fs.createWriteStream(downloadPath);
+    let destinationStream =
+      (await Deno.open(downloadPath, { write: true, create: true })).writable;
+
     const headers = getDownloadHeaders("application/json", true, true);
 
     // a single GET request is used to download a file
-    const makeDownloadRequest = async (): Promise<IHttpClientResponse> => {
+    const makeDownloadRequest = async (): Promise<Response> => {
       const client = this.downloadHttpManager.getClient(httpClientIndex);
-      return await client.get(artifactLocation, headers);
+      return await client(artifactLocation, { headers });
     };
 
     // check the response headers to determine if the file was compressed using gzip
-    const isGzip = (incomingHeaders: IncomingHttpHeaders): boolean => {
-      return (
-        "content-encoding" in incomingHeaders &&
-        incomingHeaders["content-encoding"] === "gzip"
-      );
+    const isGzip = (incomingHeaders: Headers): boolean => {
+      return incomingHeaders.get("content-encoding") === "gzip";
     };
 
     // Increments the current retry count and then checks if the retry limit has been reached
@@ -208,7 +201,7 @@ export class DownloadHttpClient {
       if (
         !expected ||
         !received ||
-        process.env["ACTIONS_ARTIFACT_SKIP_DOWNLOAD_VALIDATION"]
+        Deno.env.get("ACTIONS_ARTIFACT_SKIP_DOWNLOAD_VALIDATION")
       ) {
         core.info("Skipping download validation.");
         return true;
@@ -222,12 +215,14 @@ export class DownloadHttpClient {
     ): Promise<void> => {
       destinationStream.close();
       await rmFile(fileDownloadPath);
-      destinationStream = fs.createWriteStream(fileDownloadPath);
+      destinationStream =
+        (await Deno.open(fileDownloadPath, { write: true, create: true }))
+          .writable;
     };
 
     // keep trying to download a file until a retry limit has been reached
     while (retryCount <= retryLimit) {
-      let response: IHttpClientResponse;
+      let response: Response;
       try {
         response = await makeDownloadRequest();
       } catch (error) {
@@ -242,18 +237,18 @@ export class DownloadHttpClient {
       }
 
       let forceRetry = false;
-      if (isSuccessStatusCode(response.message.statusCode)) {
+      if (isSuccessStatusCode(response.status)) {
         // The body contains the contents of the file however calling response.readBody() causes all the content to be converted to a string
         // which can cause some gzip encoded data to be lost
         // Instead of using response.readBody(), response.message is a readableStream that can be directly used to get the raw body contents
         try {
-          const isGzipped = isGzip(response.message.headers);
+          const isGzipped = isGzip(response.headers);
           await this.pipeResponseToFile(response, destinationStream, isGzipped);
 
           if (
             isGzipped ||
             isAllBytesReceived(
-              response.message.headers["content-length"],
+              response.headers.get("content-length") ?? undefined,
               await getFileSize(downloadPath),
             )
           ) {
@@ -261,21 +256,21 @@ export class DownloadHttpClient {
           } else {
             forceRetry = true;
           }
-        } catch (error) {
+        } catch (_error) {
           // retry on error, most likely streams were corrupted
           forceRetry = true;
         }
       }
 
-      if (forceRetry || isRetryableStatusCode(response.message.statusCode)) {
+      if (forceRetry || isRetryableStatusCode(response.status)) {
         core.info(
-          `A ${response.message.statusCode} response code has been received while attempting to download an artifact`,
+          `A ${response.status} response code has been received while attempting to download an artifact`,
         );
         resetDestinationStream(downloadPath);
         // if a throttled status code is received, try to get the retryAfter header value, else differ to standard exponential backoff
-        isThrottledStatusCode(response.message.statusCode)
+        isThrottledStatusCode(response.status)
           ? await backOff(
-            tryGetRetryAfterValueTimeInMilliseconds(response.message.headers),
+            tryGetRetryAfterValueTimeInMilliseconds(response.headers),
           )
           : await backOff();
       } else {
@@ -283,7 +278,7 @@ export class DownloadHttpClient {
         displayHttpDiagnostics(response);
         return Promise.reject(
           new Error(
-            `Unexpected http ${response.message.statusCode} during download for ${artifactLocation}`,
+            `Unexpected http ${response.status} during download for ${artifactLocation}`,
           ),
         );
       }
@@ -297,61 +292,33 @@ export class DownloadHttpClient {
    * @param isGzip a boolean denoting if the content is compressed using gzip and if we need to decode it
    */
   async pipeResponseToFile(
-    response: IHttpClientResponse,
-    destinationStream: fs.WriteStream,
+    response: Response,
+    destinationStream: WritableStream<Uint8Array>,
     isGzip: boolean,
   ): Promise<void> {
-    await new Promise((resolve, reject) => {
-      if (isGzip) {
-        const gunzip = zlib.createGunzip();
-        response.message
-          .on("error", (error) => {
-            core.error(
-              `An error occurred while attempting to read the response stream`,
-            );
-            gunzip.close();
-            destinationStream.close();
-            reject(error);
-          })
-          .pipe(gunzip)
-          .on("error", (error) => {
-            core.error(
-              `An error occurred while attempting to decompress the response stream`,
-            );
-            destinationStream.close();
-            reject(error);
-          })
-          .pipe(destinationStream)
-          .on("close", () => {
-            resolve();
-          })
-          .on("error", (error) => {
-            core.error(
-              `An error occurred while writing a downloaded file to ${destinationStream.path}`,
-            );
-            reject(error);
-          });
-      } else {
-        response.message
-          .on("error", (error) => {
-            core.error(
-              `An error occurred while attempting to read the response stream`,
-            );
-            destinationStream.close();
-            reject(error);
-          })
-          .pipe(destinationStream)
-          .on("close", () => {
-            resolve();
-          })
-          .on("error", (error) => {
-            core.error(
-              `An error occurred while writing a downloaded file to ${destinationStream.path}`,
-            );
-            reject(error);
-          });
+    if (isGzip) {
+      const gunzip = new DecompressionStream("gzip");
+
+      try {
+        await response.body!.pipeThrough(gunzip)
+          .pipeTo(destinationStream);
+      } catch (error) {
+        core.error(
+          `An error occurred while attempting to read/decompress the response stream`,
+        );
+        destinationStream.close();
+        throw error;
       }
-    });
-    return;
+    } else {
+      try {
+        await response.body!.pipeTo(destinationStream);
+      } catch (error) {
+        core.error(
+          `An error occurred while attempting to read the response stream`,
+        );
+        await destinationStream.close();
+        throw error;
+      }
+    }
   }
 }

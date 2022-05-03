@@ -1,9 +1,7 @@
+import { ensureDir } from "fs";
 import { debug, info, warning } from "../../core/core.ts";
-import { promises as fs } from "fs";
-import { HttpClient, HttpCodes } from "@actions/http-client";
-import { BearerCredentialHandler } from "@actions/http-client/auth";
-import { IHeaders, IHttpClientResponse } from "@actions/http-client/interfaces";
-import { IncomingHttpHeaders } from "http";
+import { HttpCodes } from "../../http-client/index.ts";
+
 import {
   getInitialRetryIntervalInMilliseconds,
   getRetryMultiplier,
@@ -11,6 +9,7 @@ import {
   getRuntimeUrl,
   getWorkFlowRunId,
 } from "./config-variables.ts";
+import { HttpClient } from "./http-manager.ts";
 
 /**
  * Returns a retry time in milliseconds that exponentially gets larger
@@ -37,7 +36,7 @@ export function getExponentialRetryTimeInMilliseconds(
  * Parses a env variable that is a number
  */
 export function parseEnvNumber(key: string): number | undefined {
-  const value = Number(process.env[key]);
+  const value = Number(Deno.env.get(key));
   if (Number.isNaN(value) || value < 0) {
     return undefined;
   }
@@ -94,10 +93,11 @@ export function isThrottledStatusCode(statusCode?: number): boolean {
  * @param headers all the headers received when making an http call
  */
 export function tryGetRetryAfterValueTimeInMilliseconds(
-  headers: IncomingHttpHeaders,
+  headers: Headers,
 ): number | undefined {
-  if (headers["retry-after"]) {
-    const retryTime = Number(headers["retry-after"]);
+  const retryAfter = headers.get("retry-after");
+  if (retryAfter) {
+    const retryTime = Number(retryAfter);
     if (!isNaN(retryTime)) {
       info(`Retry-After header is present with a value of ${retryTime}`);
       return retryTime * 1000;
@@ -139,8 +139,8 @@ export function getDownloadHeaders(
   contentType: string,
   isKeepAlive?: boolean,
   acceptGzip?: boolean,
-): IHeaders {
-  const requestOptions: IHeaders = {};
+): Record<string, string> {
+  const requestOptions = <Record<string, string>> {};
 
   if (contentType) {
     requestOptions["Content-Type"] = contentType;
@@ -182,8 +182,8 @@ export function getUploadHeaders(
   uncompressedLength?: number,
   contentLength?: number,
   contentRange?: string,
-): IHeaders {
-  const requestOptions: IHeaders = {};
+): Record<string, string> {
+  const requestOptions = <Record<string, string>> {};
   requestOptions["Accept"] = `application/json;api-version=${getApiVersion()}`;
   if (contentType) {
     requestOptions["Content-Type"] = contentType;
@@ -195,10 +195,10 @@ export function getUploadHeaders(
   }
   if (isGzip) {
     requestOptions["Content-Encoding"] = "gzip";
-    requestOptions["x-tfs-filelength"] = uncompressedLength;
+    requestOptions["x-tfs-filelength"] = uncompressedLength!.toString();
   }
   if (contentLength) {
-    requestOptions["Content-Length"] = contentLength;
+    requestOptions["Content-Length"] = contentLength.toString();
   }
   if (contentRange) {
     requestOptions["Content-Range"] = contentRange;
@@ -207,10 +207,37 @@ export function getUploadHeaders(
   return requestOptions;
 }
 
+function headersToRecord(headers?: HeadersInit): Record<string, string> {
+  if (!headers) return {};
+  let result = <Record<string, string>> {};
+  if (Array.isArray(headers) || headers instanceof Headers) {
+    for (const [key, value] of headers) {
+      result[key] = value;
+    }
+  } else {
+    result = headers;
+  }
+  return result;
+}
+
 export function createHttpClient(userAgent: string): HttpClient {
-  return new HttpClient(userAgent, [
-    new BearerCredentialHandler(getRuntimeToken()),
-  ]);
+  const token = getRuntimeToken();
+
+  return Object.assign(
+    (input: string | Request, init?: RequestInit | undefined) =>
+      fetch(
+        input,
+        {
+          ...init,
+          headers: {
+            "User-Agent": userAgent,
+            "Authorization": `Bearer ${token}`,
+            ...headersToRecord(init?.headers),
+          },
+        },
+      ),
+    { close() {} },
+  );
 }
 
 export function getArtifactUrl(): string {
@@ -229,12 +256,14 @@ export function getArtifactUrl(): string {
  * Certain information such as the TLSSocket and the Readable state are not really useful for diagnostic purposes so they can be avoided.
  * Other information such as the headers, the response code and message might be useful, so this is displayed.
  */
-export function displayHttpDiagnostics(response: IHttpClientResponse): void {
+export function displayHttpDiagnostics(response: Response): void {
   info(
     `##### Begin Diagnostic HTTP information #####
-Status Code: ${response.message.statusCode}
-Status Message: ${response.message.statusMessage}
-Header Information: ${JSON.stringify(response.message.headers, undefined, 2)}
+Status Code: ${response.status}
+Status Message: ${response.statusText}
+Header Information: ${
+      JSON.stringify(Array.from(response.headers), undefined, 2)
+    }
 ###### End Diagnostic HTTP information ######`,
   );
 }
@@ -243,9 +272,7 @@ export async function createDirectoriesForArtifact(
   directories: string[],
 ): Promise<void> {
   for (const directory of directories) {
-    await fs.mkdir(directory, {
-      recursive: true,
-    });
+    await ensureDir(directory);
   }
 }
 
@@ -253,12 +280,12 @@ export async function createEmptyFilesForArtifact(
   emptyFilesToCreate: string[],
 ): Promise<void> {
   for (const filePath of emptyFilesToCreate) {
-    await (await fs.open(filePath, "w")).close();
+    (await Deno.open(filePath, { write: true })).close();
   }
 }
 
 export async function getFileSize(filePath: string): Promise<number> {
-  const stats = await fs.stat(filePath);
+  const stats = await Deno.lstat(filePath);
   debug(
     `${filePath} size:(${stats.size}) blksize:(${stats.blksize}) blocks:(${stats.blocks})`,
   );
@@ -266,7 +293,7 @@ export async function getFileSize(filePath: string): Promise<number> {
 }
 
 export async function rmFile(filePath: string): Promise<void> {
-  await fs.unlink(filePath);
+  await Deno.remove(filePath);
 }
 
 export function getProperRetention(
@@ -290,6 +317,6 @@ export function getProperRetention(
   return retention;
 }
 
-export async function sleep(milliseconds: number): Promise<void> {
+export function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }

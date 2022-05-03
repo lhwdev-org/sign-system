@@ -1,6 +1,5 @@
-import * as fs from "fs";
 import { debug } from "../../core/core.ts";
-import { join, normalize, resolve } from "path";
+import { join, resolve } from "path";
 import { checkArtifactFilePath } from "./path-and-artifact-name-validation.ts";
 
 export interface UploadSpecification {
@@ -22,44 +21,49 @@ export function getUploadSpecification(
   // artifact name was checked earlier on, no need to check again
   const specifications: UploadSpecification[] = [];
 
-  if (!fs.existsSync(rootDirectory)) {
-    throw new Error(`Provided rootDirectory ${rootDirectory} does not exist`);
-  }
-  if (!fs.lstatSync(rootDirectory).isDirectory()) {
-    throw new Error(
-      `Provided rootDirectory ${rootDirectory} is not a valid directory`,
-    );
+  try {
+    if (!Deno.statSync(rootDirectory).isDirectory) {
+      throw new Error(
+        `Provided rootDirectory ${rootDirectory} is not a valid directory`,
+      );
+    }
+  } catch (error) {
+    throw new Error(`Provided rootDirectory ${rootDirectory} does not exist`, {
+      cause: error,
+    });
   }
   // Normalize and resolve, this allows for either absolute or relative paths to be used
-  rootDirectory = normalize(rootDirectory);
   rootDirectory = resolve(rootDirectory);
 
   /*
-     Example to demonstrate behavior
+    Example to demonstrate behavior
 
-     Input:
-       artifactName: my-artifact
-       rootDirectory: '/home/user/files/plz-upload'
-       artifactFiles: [
-         '/home/user/files/plz-upload/file1.txt',
-         '/home/user/files/plz-upload/file2.txt',
-         '/home/user/files/plz-upload/dir/file3.txt'
-       ]
+    Input:
+      artifactName: my-artifact
+      rootDirectory: '/home/user/files/plz-upload'
+      artifactFiles: [
+        '/home/user/files/plz-upload/file1.txt',
+        '/home/user/files/plz-upload/file2.txt',
+        '/home/user/files/plz-upload/dir/file3.txt'
+      ]
 
-     Output:
-       specifications: [
-         ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file1.txt'],
-         ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file2.txt'],
-         ['/home/user/files/plz-upload/file1.txt', 'my-artifact/dir/file3.txt']
-       ]
+    Output:
+      specifications: [
+        ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file1.txt'],
+        ['/home/user/files/plz-upload/file1.txt', 'my-artifact/file2.txt'],
+        ['/home/user/files/plz-upload/file1.txt', 'my-artifact/dir/file3.txt']
+      ]
   */
   for (let file of artifactFiles) {
-    if (!fs.existsSync(file)) {
-      throw new Error(`File ${file} does not exist`);
+    let isDirectory;
+    try {
+      isDirectory = Deno.statSync(file).isDirectory;
+    } catch (error) {
+      throw new Error(`File ${file} does not exist`, { cause: error });
     }
-    if (!fs.lstatSync(file).isDirectory()) {
+
+    if (!isDirectory) {
       // Normalize and resolve, this allows for either absolute or relative paths to be used
-      file = normalize(file);
       file = resolve(file);
       if (!file.startsWith(rootDirectory)) {
         throw new Error(

@@ -1,7 +1,7 @@
-import * as fs from "fs";
+import { readableStreamFromReader } from "streams";
 import * as core from "../../core/core.ts";
-import * as tmp from "tmp-promise";
-import * as stream from "stream";
+import { HttpCodes } from "../../http-client/index.ts";
+
 import {
   ArtifactResponse,
   CreateArtifactParameters,
@@ -28,14 +28,11 @@ import {
   getUploadFileConcurrency,
 } from "./config-variables.ts";
 import { StatusReporter } from "./status-reporter.ts";
-import { HttpCodes } from "@actions/http-client";
-import { IHttpClientResponse } from "@actions/http-client/interfaces";
 import { HttpManager } from "./http-manager.ts";
 import { UploadSpecification } from "./upload-specification.ts";
 import { UploadOptions } from "./upload-options.ts";
 import { createGZipFileInBuffer, createGZipFileOnDisk } from "./upload-gzip.ts";
 import { retryHttpClientRequest } from "./requestUtils.ts";
-const stat = promisify(fs.stat);
 
 export class UploadHttpClient {
   private uploadHttpManager: HttpManager;
@@ -72,7 +69,7 @@ export class UploadHttpClient {
       );
     }
 
-    const data: string = JSON.stringify(parameters, null, 2);
+    const data = JSON.stringify(parameters, null, 2);
     const artifactUrl = getArtifactUrl();
 
     // use the first client from the httpManager, `keep-alive` is not used so the connection will close immediately
@@ -95,11 +92,10 @@ export class UploadHttpClient {
 
     const response = await retryHttpClientRequest(
       "Create Artifact Container",
-      async () => client.post(artifactUrl, data, headers),
+      async () => await client(artifactUrl, { body: data, headers }),
       customErrorMessages,
     );
-    const body: string = await response.readBody();
-    return JSON.parse(body);
+    return await response.json();
   }
 
   /**
@@ -218,9 +214,9 @@ export class UploadHttpClient {
     httpClientIndex: number,
     parameters: UploadFileParameters,
   ): Promise<UploadFileResult> {
-    const fileStat: fs.Stats = await stat(parameters.file);
+    const fileStat = await Deno.stat(parameters.file);
     const totalFileSize = fileStat.size;
-    const isFIFO = fileStat.isFIFO();
+    // const isFIFO = fileStat.
     let offset = 0;
     let isUploadSuccessful = true;
     let failedChunkSizes = 0;
@@ -230,7 +226,7 @@ export class UploadHttpClient {
     // the file that is being uploaded is less than 64k in size to increase throughput and to minimize disk I/O
     // for creating a new GZip file, an in-memory buffer is used for compression
     // with named pipes the file size is reported as zero in that case don't read the file in memory
-    if (!isFIFO && totalFileSize < 65536) {
+    if (/* !isFIFO &&  */ totalFileSize < 65536) {
       core.debug(
         `${parameters.file} is less than 64k in size. Creating a gzip file in-memory to potentially reduce the upload size`,
       );
@@ -238,14 +234,14 @@ export class UploadHttpClient {
 
       // An open stream is needed in the event of a failure and we need to retry. If a NodeJS.ReadableStream is directly passed in,
       // it will not properly get reset to the start of the stream if a chunk upload needs to be retried
-      let openUploadStream: () => NodeJS.ReadableStream;
+      let openUploadStream: () => ReadableStream<Uint8Array>;
 
-      if (totalFileSize < buffer.byteLength) {
+      if (totalFileSize < buffer.length) {
         // compression did not help with reducing the size, use a readable stream from the original file for upload
         core.debug(
           `The gzip file created for ${parameters.file} did not help with reducing the size of the file. The original file will be uploaded as-is`,
         );
-        openUploadStream = () => fs.createReadStream(parameters.file);
+        openUploadStream = () => Deno.openSync(parameters.file).readable;
         isGzip = false;
         uploadFileSize = totalFileSize;
       } else {
@@ -253,12 +249,8 @@ export class UploadHttpClient {
         core.debug(
           `A gzip file created for ${parameters.file} helped with reducing the size of the original file. The file will be uploaded using gzip.`,
         );
-        openUploadStream = () => {
-          const passThrough = new stream.PassThrough();
-          passThrough.end(buffer);
-          return passThrough;
-        };
-        uploadFileSize = buffer.byteLength;
+        openUploadStream = () => readableStreamFromReader(buffer);
+        uploadFileSize = buffer.length;
       }
 
       const result = await this.uploadChunk(
@@ -287,22 +279,22 @@ export class UploadHttpClient {
     } else {
       // the file that is being uploaded is greater than 64k in size, a temporary file gets created on disk using the
       // npm tmp-promise package and this file gets used to create a GZipped file
-      const tempFile = await tmp.file();
+      const tempFile = await Deno.makeTempFile();
       core.debug(
-        `${parameters.file} is greater than 64k in size. Creating a gzip file on-disk ${tempFile.path} to potentially reduce the upload size`,
+        `${parameters.file} is greater than 64k in size. Creating a gzip file on-disk ${tempFile} to potentially reduce the upload size`,
       );
 
       // create a GZip file of the original file being uploaded, the original file should not be modified in any way
       uploadFileSize = await createGZipFileOnDisk(
         parameters.file,
-        tempFile.path,
+        tempFile,
       );
 
-      let uploadFilePath = tempFile.path;
+      let uploadFilePath = tempFile;
 
       // compression did not help with size reduction, use the original file for upload and delete the temp GZip file
       // for named pipes totalFileSize is zero, this assumes compression did help
-      if (!isFIFO && totalFileSize < uploadFileSize) {
+      if (/* !isFIFO &&  */ totalFileSize < uploadFileSize) {
         core.debug(
           `The gzip file created for ${parameters.file} did not help with reducing the size of the file. The original file will be uploaded as-is`,
         );
@@ -316,6 +308,11 @@ export class UploadHttpClient {
       }
 
       let abortFileUpload = false;
+
+      const file = await Deno.open(uploadFilePath);
+      const BUFFER_SIZE = 64 * 1024;
+      const buffer = new Uint8Array(BUFFER_SIZE);
+
       // upload only a single chunk at a time
       while (offset < uploadFileSize) {
         const chunkSize = Math.min(
@@ -325,11 +322,14 @@ export class UploadHttpClient {
 
         const startChunkIndex = offset;
         const endChunkIndex = offset + chunkSize - 1;
+        let fileOffset = offset;
         offset += parameters.maxChunkSize;
+        const fileOffsetEnd = offset;
 
         if (abortFileUpload) {
           // if we don't want to continue in the event of an error, any pending upload chunks will be marked as failed
           failedChunkSizes += chunkSize;
+          file.seek(chunkSize, Deno.SeekMode.Current);
           continue;
         }
 
@@ -337,10 +337,24 @@ export class UploadHttpClient {
           httpClientIndex,
           parameters.resourceUrl,
           () =>
-            fs.createReadStream(uploadFilePath, {
-              start: startChunkIndex,
-              end: endChunkIndex,
-              autoClose: false,
+            new ReadableStream({
+              async pull(controller) {
+                if (fileOffset >= fileOffsetEnd) {
+                  controller.close();
+                  return;
+                }
+
+                const count = await file.read(buffer);
+                fileOffset += BUFFER_SIZE;
+                if (!count) {
+                  controller.close();
+                } else if (count < BUFFER_SIZE) {
+                  controller.enqueue(buffer.subarray(0, count));
+                  controller.close();
+                } else {
+                  controller.enqueue(buffer);
+                }
+              },
             }),
           startChunkIndex,
           endChunkIndex,
@@ -348,6 +362,15 @@ export class UploadHttpClient {
           isGzip,
           totalFileSize,
         );
+
+        // assertion
+        if (
+          chunkSize == parameters.maxChunkSize && fileOffset != fileOffsetEnd
+        ) {
+          throw Error(
+            "assertion! fileOffset != fileOffsetEnd even file is not end",
+          );
+        }
 
         if (!result) {
           // Chunk failed to upload, report as failed and do not continue uploading any more chunks for the file. It is possible that part of a chunk was
@@ -371,8 +394,8 @@ export class UploadHttpClient {
 
       // Delete the temporary file that was created as part of the upload. If the temp file does not get manually deleted by
       // calling cleanup, it gets removed when the node process exits. For more info see: https://www.npmjs.com/package/tmp-promise#about
-      core.debug(`deleting temporary gzip file ${tempFile.path}`);
-      await tempFile.cleanup();
+      core.debug(`deleting temporary gzip file ${tempFile}`);
+      await Deno.remove(tempFile);
 
       return {
         isSuccess: isUploadSuccessful,
@@ -398,7 +421,7 @@ export class UploadHttpClient {
   private async uploadChunk(
     httpClientIndex: number,
     resourceUrl: string,
-    openStream: () => NodeJS.ReadableStream,
+    openStream: () => BodyInit,
     start: number,
     end: number,
     uploadFileSize: number,
@@ -415,9 +438,13 @@ export class UploadHttpClient {
       getContentRange(start, end, uploadFileSize),
     );
 
-    const uploadChunkRequest = async (): Promise<IHttpClientResponse> => {
+    const uploadChunkRequest = async (): Promise<Response> => {
       const client = this.uploadHttpManager.getClient(httpClientIndex);
-      return await client.sendStream("PUT", resourceUrl, openStream(), headers);
+      return await client(resourceUrl, {
+        method: "PUT",
+        body: openStream(),
+        headers,
+      });
     };
 
     let retryCount = 0;
@@ -426,7 +453,7 @@ export class UploadHttpClient {
     // Increments the current retry count and then checks if the retry limit has been reached
     // If there have been too many retries, fail so the download stops
     const incrementAndCheckRetryLimit = (
-      response?: IHttpClientResponse,
+      response?: Response,
     ): boolean => {
       retryCount++;
       if (retryCount > retryLimit) {
@@ -463,7 +490,7 @@ export class UploadHttpClient {
 
     // allow for failed chunks to be retried multiple times
     while (retryCount <= retryLimit) {
-      let response: IHttpClientResponse;
+      let response: Response;
 
       try {
         response = await uploadChunkRequest();
@@ -484,20 +511,20 @@ export class UploadHttpClient {
 
       // Always read the body of the response. There is potential for a resource leak if the body is not read which will
       // result in the connection remaining open along with unintended consequences when trying to dispose of the client
-      await response.readBody();
+      await response.body?.cancel();
 
-      if (isSuccessStatusCode(response.message.statusCode)) {
+      if (isSuccessStatusCode(response.status)) {
         return true;
-      } else if (isRetryableStatusCode(response.message.statusCode)) {
+      } else if (isRetryableStatusCode(response.status)) {
         core.info(
-          `A ${response.message.statusCode} status code has been received, will attempt to retry the upload`,
+          `A ${response.status} status code has been received, will attempt to retry the upload`,
         );
         if (incrementAndCheckRetryLimit(response)) {
           return false;
         }
-        isThrottledStatusCode(response.message.statusCode)
+        isThrottledStatusCode(response.status)
           ? await backOff(
-            tryGetRetryAfterValueTimeInMilliseconds(response.message.headers),
+            tryGetRetryAfterValueTimeInMilliseconds(response.headers),
           )
           : await backOff();
       } else {
@@ -538,10 +565,15 @@ export class UploadHttpClient {
     // TODO retry for all possible response codes, the artifact upload is pretty much complete so it at all costs we should try to finish this
     const response = await retryHttpClientRequest(
       "Finalize artifact upload",
-      async () => client.patch(resourceUrl.toString(), data, headers),
+      async () =>
+        await client(resourceUrl.toString(), {
+          method: "FETCH",
+          body: data,
+          headers,
+        }),
       customErrorMessages,
     );
-    await response.readBody();
+    await response.body?.cancel();
     core.debug(
       `Artifact ${artifactName} has been successfully uploaded, total size in bytes: ${size}`,
     );

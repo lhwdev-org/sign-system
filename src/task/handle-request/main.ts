@@ -1,4 +1,5 @@
 import { Issue, Repository, User } from "../../models/models.ts";
+import { create } from "../actions/utils/artifact/artifact-client.ts";
 
 export default async function onHandleRequest(
   repository: Repository,
@@ -6,5 +7,4 @@ export default async function onHandleRequest(
   sender: User,
   filePath: string,
 ) {
-  const body = issue.body!;
 }

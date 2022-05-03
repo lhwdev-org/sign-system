@@ -1,0 +1,17 @@
+name: Test Workflow
+on: repository_dispatch
+
+jobs:
+  test-workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: repo
+
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Test wow
+        run: deno run --no-check=remote --allow-all --unstable --quiet repo/task/actions/test.ts

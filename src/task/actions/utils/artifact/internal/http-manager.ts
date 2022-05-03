@@ -1,5 +1,11 @@
-import { HttpClient } from "@actions/http-client/index";
 import { createHttpClient } from "./utils.ts";
+
+export type HttpClient =
+  & ((
+    input: string | Request,
+    init?: RequestInit | undefined,
+  ) => Promise<Response>)
+  & { close: () => void };
 
 /**
  * Used for managing http clients during either upload or download
@@ -23,7 +29,7 @@ export class HttpManager {
   // client disposal is necessary if a keep-alive connection is used to properly close the connection
   // for more information see: https://github.com/actions/http-client/blob/04e5ad73cd3fd1f5610a32116b0759eddf6570d2/index.ts#L292
   disposeAndReplaceClient(index: number): void {
-    this.clients[index].dispose();
+    this.clients[index].close();
     this.clients[index] = createHttpClient(this.userAgent);
   }
 
