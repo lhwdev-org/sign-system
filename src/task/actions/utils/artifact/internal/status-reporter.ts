@@ -13,7 +13,7 @@ export class StatusReporter {
   private processedCount = 0;
   private displayFrequencyInMilliseconds: number;
   private largeFiles = new Map<string, string>();
-  private totalFileStatus: NodeJS.Timeout | undefined;
+  private totalFileStatus: number | undefined;
 
   constructor(displayFrequencyInMilliseconds: number) {
     this.totalFileStatus = undefined;
