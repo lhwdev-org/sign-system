@@ -1,5 +1,5 @@
-import { create as createArtifactClient } from "./utils/artifact/artifact-client.ts";
-import * as core from "./utils/core/core.ts";
+import { create as createArtifactClient } from "../../libs/actions/artifact/artifact-client.ts";
+import * as core from "../../libs/actions/core/core.ts";
 
 // deno-lint-ignore require-await
 await core.group("Env", async () => {
