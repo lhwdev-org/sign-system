@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any ban-types
-import { isPlainObject } from "./is-plain-object.ts";
+import { isPlainObject } from "../../util/is-plain-object.ts";
 
 export function mergeDeep(defaults: any, options: any): object {
   const result: any = Object.assign({}, defaults);

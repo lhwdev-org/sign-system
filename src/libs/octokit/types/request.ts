@@ -29,7 +29,7 @@ export type RequestHeaders = {
    * `user-agent` is set do a default and can be overwritten as needed.
    */
   "user-agent"?: string;
-  [header: string]: string | number | undefined;
+  [header: string]: string | undefined;
 };
 
 /**

@@ -1,4 +1,4 @@
-# endpoint.js
+# endpoint.js for Deno
 
 > Turns GitHub REST API endpoints into generic request options
 

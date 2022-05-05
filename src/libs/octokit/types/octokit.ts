@@ -1,29 +1,34 @@
 // deno-lint-ignore-file no-explicit-any ban-types
 import { Route } from "./common.ts";
-import { EndpointOptions } from "./endpoints.ts";
+import { EndpointDefaults, EndpointOptions } from "./endpoints.ts";
 import { RequestInterface, RequestParameters } from "./request.ts";
 import { OctokitResponse } from "./response.ts";
 
 /**
  * Octokit-specific request options which are ignored for the actual request, but can be used by Octokit or plugins to manipulate how the request is sent or how a response is handled
  */
-export type RequestRequestOptions = {
+export interface RequestRequestOptions extends RequestInit {
   /**
    * Custom replacement for built-in fetch method. Useful for testing or request hooks.
    * Useful for custom proxy, certificate, or dns lookup.
    */
   fetch?: typeof fetch;
-  /**
-   * Use an `AbortController` instance to cancel a request.
-   */
-  signal?: AbortController;
-  /**
-   * Request/response timeout in ms, it resets on redirect. 0 to disable (OS limit applies). `options.request.signal` is recommended instead.
-   */
-  timeout?: number;
 
-  [option: string]: any;
-};
+  log?: { warn(text: string): void };
+
+  hook?: (
+    request: (
+      route: Route | EndpointOptions,
+      parameters?: RequestParameters,
+    ) => Promise<OctokitResponse<any>>,
+    endpointOptions: EndpointDefaults,
+  ) => Promise<OctokitResponse<any>>;
+
+  // /**
+  //  * Request/response timeout in ms, it resets on redirect. 0 to disable (OS limit applies). `options.request.signal` is recommended instead.
+  //  */
+  // timeout?: number;
+}
 
 /**
  * Interface to implement complex authentication strategies for Octokit.
