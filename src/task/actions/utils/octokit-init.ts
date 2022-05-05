@@ -1,4 +1,4 @@
-import { getOctokit } from "./github/github.ts";
+import { getOctokit } from "../../../libs/actions/github/github.ts";
 
 let octokit: ReturnType<typeof getOctokit>;
 

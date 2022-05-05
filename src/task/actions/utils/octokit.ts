@@ -1,4 +1,4 @@
-import { GithubModelManager } from "../../../models/impl/github/GithubModel.ts";
+import { GithubModelManager } from "../../../models/impl/github/base/GithubModel.ts";
 import { octokitOf } from "./octokit-init.ts";
 
 const octokit = octokitOf();
