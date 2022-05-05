@@ -1,4 +1,4 @@
-# openapi-types.ts
+# openapi-types.ts for Deno
 
 > Generated TypeScript definitions based on GitHub's OpenAPI spec
 
