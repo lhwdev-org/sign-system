@@ -11,12 +11,26 @@ So I reimplement octokit in Deno to support these cases.
 graph TD;
   core --> request;
   core --> types;
+  core --> graphql;
+  core --> auth-token;
+
+  graphql --> request;
+  graphql --> types;
+
+  auth-token --> types;
+
   request --> endpoint;
   request --> types;
   request --> node-fetch;
+  request --> request-error;
+
+  request-error --> types;
+
   types --> openapi-types;
+
   endpoint --> types;
 
+  plugin-rest-endpoint-methods --> core;
   plugin-rest-endpoint-methods --> types;
 ```
 
