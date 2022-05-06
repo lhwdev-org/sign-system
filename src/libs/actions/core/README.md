@@ -131,7 +131,7 @@ core.notice("Something happened that you might want to know about.")
 
 These will surface to the UI in the Actions page and on Pull Requests. They look something like this:
 
-![Annotations Image](../../docs/assets/annotations.png)
+![Annotations Image](https://github.com/actions/toolkit/blob/main/docs/assets/annotations.png)
 
 These annotations can also be attached to particular lines and columns of your source files to show exactly where a problem is occuring. 
 
