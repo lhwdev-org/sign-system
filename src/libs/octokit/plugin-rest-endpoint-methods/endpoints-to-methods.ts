@@ -1,13 +1,16 @@
-import { Octokit } from "../core";
+import { Octokit } from "../core/index.ts";
 import {
   EndpointOptions,
   RequestMethod,
   RequestParameters,
   Route,
   Url,
-} from "@octokit/types";
-import { EndpointDecorations, EndpointsDefaultsAndDecorations } from "./types";
-import { RestEndpointMethods } from "./generated/method-types";
+} from "../types/index.ts";
+import {
+  EndpointDecorations,
+  EndpointsDefaultsAndDecorations,
+} from "./types.ts";
+import { RestEndpointMethods } from "./generated/method-types.ts";
 
 type EndpointMethods = {
   [methodName: string]: typeof Octokit.prototype.request;
@@ -17,6 +20,7 @@ export function endpointsToMethods(
   octokit: Octokit,
   endpointsMap: EndpointsDefaultsAndDecorations,
 ) {
+  // deno-lint-ignore ban-types
   const newMethods = {} as { [key: string]: object };
 
   for (const [scope, endpoints] of Object.entries(endpointsMap)) {

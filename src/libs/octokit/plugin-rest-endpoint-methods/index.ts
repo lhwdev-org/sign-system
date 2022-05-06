@@ -1,10 +1,10 @@
-import { Octokit } from "@octokit/core";
+import { Octokit } from "../core/index.ts";
 
-import ENDPOINTS from "./generated/endpoints";
-export { RestEndpointMethodTypes } from "./generated/parameters-and-response-types";
-import { VERSION } from "./version";
-import { Api } from "./types";
-import { endpointsToMethods } from "./endpoints-to-methods";
+import ENDPOINTS from "./generated/endpoints.ts";
+export type { RestEndpointMethodTypes } from "./generated/parameters-and-response-types.ts";
+import { VERSION } from "./version.ts";
+import { Api } from "./types.ts";
+import { endpointsToMethods } from "./endpoints-to-methods.ts";
 
 export function restEndpointMethods(octokit: Octokit): Api {
   const api = endpointsToMethods(octokit, ENDPOINTS);

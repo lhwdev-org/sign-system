@@ -1,4 +1,4 @@
-import { EndpointsDefaultsAndDecorations } from "../types";
+import { EndpointsDefaultsAndDecorations } from "../types.ts";
 const Endpoints: EndpointsDefaultsAndDecorations = {
   actions: {
     addSelectedRepoToOrgSecret: [

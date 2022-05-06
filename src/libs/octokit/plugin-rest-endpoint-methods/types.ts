@@ -1,6 +1,6 @@
-import { Route, RequestParameters } from "@octokit/types";
+import { RequestParameters, Route } from "../types/index.ts";
 
-import { RestEndpointMethods } from "./generated/method-types";
+import { RestEndpointMethods } from "./generated/method-types.ts";
 
 export type Api = { rest: RestEndpointMethods };
 
