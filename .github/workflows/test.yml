@@ -15,5 +15,8 @@ jobs:
         with:
           deno-version: v1.x
 
+        # envs like ACTIONS_RUNTIME_TOKEN are not exported for inline steps
+      - uses: lhwdev-org/extra-actions/passthrough-action-envs@main
+
       - name: Test wow
         run: deno run --no-check=remote --allow-all --unstable --quiet repo/src/task/actions/test.ts
