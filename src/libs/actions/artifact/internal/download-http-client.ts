@@ -21,6 +21,7 @@ import {
   getRetryLimit,
 } from "./config-variables.ts";
 import { retryHttpClientRequest } from "./requestUtils.ts";
+import { closeStreamSafe } from "../../../utils/safe-close.ts";
 
 export class DownloadHttpClient {
   // http manager is used for concurrent connections when downloading multiple files at once
@@ -213,7 +214,7 @@ export class DownloadHttpClient {
     const resetDestinationStream = async (
       fileDownloadPath: string,
     ): Promise<void> => {
-      destinationStream.close();
+      await closeStreamSafe(destinationStream);
       await rmFile(fileDownloadPath);
       destinationStream =
         (await Deno.open(fileDownloadPath, { write: true, create: true }))
@@ -306,7 +307,7 @@ export class DownloadHttpClient {
         core.error(
           `An error occurred while attempting to read/decompress the response stream`,
         );
-        destinationStream.close();
+        await closeStreamSafe(destinationStream);
         throw error;
       }
     } else {
@@ -316,7 +317,7 @@ export class DownloadHttpClient {
         core.error(
           `An error occurred while attempting to read the response stream`,
         );
-        await destinationStream.close();
+        await closeStreamSafe(destinationStream);
         throw error;
       }
     }

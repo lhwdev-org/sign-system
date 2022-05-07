@@ -1,4 +1,5 @@
 import { Buffer } from "io";
+import { closeSafe } from "../../../utils/safe-close.ts";
 
 /**
  * GZipping certain files that are already compressed will likely not yield further size reductions. Creating large temporary gzip
@@ -44,8 +45,8 @@ export async function createGZipFileOnDisk(
     const stats = await output.stat();
     fileSize = stats.size;
   } finally {
-    input.close();
-    output.close();
+    closeSafe(input);
+    closeSafe(output);
   }
 
   return fileSize;
@@ -60,15 +61,19 @@ export async function createGZipFileInBuffer(
   originalFilePath: string,
 ): Promise<Buffer> {
   const input = await Deno.open(originalFilePath, { read: true });
-  const gzip = new CompressionStream("gzip");
-  const reader = input.readable.pipeThrough(gzip).getReader();
-  const buffer = new Buffer();
+  try {
+    const gzip = new CompressionStream("gzip");
+    const reader = input.readable.pipeThrough(gzip).getReader();
+    const buffer = new Buffer();
 
-  while (true) {
-    const result = await reader.read();
-    if (result.done) break;
-    await buffer.write(result.value);
+    while (true) {
+      const result = await reader.read();
+      if (result.done) break;
+      await buffer.write(result.value);
+    }
+
+    return buffer;
+  } finally {
+    closeSafe(input);
   }
-
-  return buffer;
 }

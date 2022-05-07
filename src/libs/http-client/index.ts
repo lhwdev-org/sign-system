@@ -1,3 +1,4 @@
+import { closeSafe } from "../utils/safe-close.ts";
 import { getProxyUrl } from "./proxy.ts";
 
 export enum HttpCodes {
@@ -54,7 +55,7 @@ export function getProxyClient(
     ): Promise<Response> => fetch(input, { client, ...init });
     return Object.assign(newFetch, {
       close() {
-        client.close();
+        closeSafe(client);
       },
     });
   }
