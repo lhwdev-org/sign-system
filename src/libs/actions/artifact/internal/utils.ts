@@ -1,6 +1,12 @@
 import { ensureDir } from "fs";
 import { debug, info, warning } from "../../core/core.ts";
-import { HttpCodes } from "../../http-client/index.ts";
+import {
+  getApiBaseUrl,
+  getProxyClient,
+  headersToRecord,
+  HttpClient,
+  HttpCodes,
+} from "../../http-client/index.ts";
 
 import {
   getInitialRetryIntervalInMilliseconds,
@@ -9,7 +15,6 @@ import {
   getRuntimeUrl,
   getWorkFlowRunId,
 } from "./config-variables.ts";
-import { HttpClient } from "./http-manager.ts";
 
 /**
  * Returns a retry time in milliseconds that exponentially gets larger
@@ -207,21 +212,9 @@ export function getUploadHeaders(
   return requestOptions;
 }
 
-function headersToRecord(headers?: HeadersInit): Record<string, string> {
-  if (!headers) return {};
-  let result = <Record<string, string>> {};
-  if (Array.isArray(headers) || headers instanceof Headers) {
-    for (const [key, value] of headers) {
-      result[key] = value;
-    }
-  } else {
-    result = headers;
-  }
-  return result;
-}
-
 export function createHttpClient(userAgent: string): HttpClient {
   const token = getRuntimeToken();
+  const fetch = getProxyClient(getApiBaseUrl()) ?? self.fetch;
 
   return Object.assign(
     (input: string | Request, init?: RequestInit | undefined) =>

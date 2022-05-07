@@ -20,7 +20,7 @@ export default function fetchWrapper(
   let status: number;
   let url: string;
 
-  const customFetch: typeof fetch = (requestOptions.request?.fetch) || fetch;
+  const customFetch: typeof fetch = (requestOptions.request?.client) || fetch;
 
   return customFetch(
     requestOptions.url,

@@ -5,7 +5,7 @@ import { issue, issueCommand } from "./command.ts";
 import { issueCommand as issueFileCommand } from "./file-command.ts";
 import { toCommandProperties, toCommandValue } from "./utils.ts";
 
-// import { OidcClient } from "./oidc-utils.ts";
+import { OidcClient } from "./oidc-utils.ts";
 
 export const eol = Deno.build.os === "windows" ? EOL.CRLF : EOL.LF;
 
@@ -357,6 +357,6 @@ export function getState(name: string): string {
   return Deno.env.get(`STATE_${name}`) || "";
 }
 
-// export async function getIDToken(aud?: string): Promise<string> {
-//   return await OidcClient.getIDToken(aud);
-// }
+export async function getIDToken(aud?: string): Promise<string> {
+  return await OidcClient.getIDToken(aud);
+}

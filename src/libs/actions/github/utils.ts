@@ -2,18 +2,20 @@ import * as Context from "./context.ts";
 import * as Utils from "./internal/utils.ts";
 
 // octokit + plugins
-import { Octokit } from "@octokit/core";
-import { restEndpointMethods } from "@octokit/plugin-rest-endpoint-methods";
-import { paginateRest } from "@octokit/plugin-paginate-rest";
+import { Octokit } from "../../octokit/core/index.ts";
+import { OctokitOptions } from "../../octokit/core/types.ts";
+import { restEndpointMethods } from "../../octokit/plugin-rest-endpoint-methods/index.ts";
+import { paginateRest } from "../../octokit/plugin-paginate-rest/index.ts";
+import { getProxyClient } from "../http-client/index.ts";
 
 export const context = new Context.Context();
 
 const baseUrl = Utils.getApiBaseUrl();
 const defaults = {
   baseUrl,
-  // request: {
-  //   agent: Utils.getProxyAgent(baseUrl),
-  // },
+  request: {
+    client: getProxyClient(baseUrl),
+  },
 };
 
 export const GitHub = Octokit.plugin(
@@ -29,10 +31,8 @@ export const GitHub = Octokit.plugin(
  */
 export function getOctokitOptions(
   token: string,
-  // deno-lint-ignore no-explicit-any
-  options?: any, // @types {import("@octokit/core/dist-types/types.d.ts").OctokitOptions}
-  // deno-lint-ignore no-explicit-any
-): any {
+  options?: OctokitOptions,
+): OctokitOptions {
   const opts = Object.assign({}, options || {}); // Shallow clone - don't mutate the object provided by the caller
 
   // Auth

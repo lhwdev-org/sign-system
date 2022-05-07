@@ -1,11 +1,5 @@
+import { HttpClient } from "../../http-client/index.ts";
 import { createHttpClient } from "./utils.ts";
-
-export type HttpClient =
-  & ((
-    input: string | Request,
-    init?: RequestInit | undefined,
-  ) => Promise<Response>)
-  & { close: () => void };
 
 /**
  * Used for managing http clients during either upload or download

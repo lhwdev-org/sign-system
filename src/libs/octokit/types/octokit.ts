@@ -1,4 +1,5 @@
 // deno-lint-ignore-file no-explicit-any ban-types
+import { HttpClient } from "../../actions/http-client/index.ts";
 import { Route } from "./common.ts";
 import { EndpointDefaults, EndpointOptions } from "./endpoints.ts";
 import { RequestInterface, RequestParameters } from "./request.ts";
@@ -12,7 +13,7 @@ export interface RequestRequestOptions extends RequestInit {
    * Custom replacement for built-in fetch method. Useful for testing or request hooks.
    * Useful for custom proxy, certificate, or dns lookup.
    */
-  fetch?: typeof fetch;
+  client?: HttpClient;
 
   log?: { warn(text: string): void };
 

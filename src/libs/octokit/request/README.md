@@ -14,8 +14,7 @@ to interact with [GitHub’s REST API](https://developer.github.com/v3/) and
 [GitHub’s GraphQL API](https://developer.github.com/v4/guides/forming-calls/#the-graphql-endpoint).
 
 It uses [`@octokit/endpoint`](https://github.com/octokit/endpoint.js) to parse
-the passed options and sends the request using [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
-([node-fetch](https://github.com/bitinn/node-fetch) in Node).
+the passed options and sends the request using [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
 
 <!-- update table of contents by running `npx markdown-toc README.md -i` -->
 
@@ -300,7 +299,7 @@ const { data: app } = await requestWithAuth(
       Function
     </td>
     <td>
-     Custom replacement for <a href="https://github.com/bitinn/node-fetch">built-in fetch method</a>. Useful for testing or request hooks.
+     Custom replacement for built-in fetch method. Useful for testing or request hooks.
     </td>
   </tr>
   <tr>
@@ -319,7 +318,7 @@ const { data: app } = await requestWithAuth(
       <a name="options-request-signal"></a><code>options.request.signal</code>
     </th>
     <td>
-      <a href="https://github.com/bitinn/node-fetch/tree/e996bdab73baf996cf2dbf25643c8fe2698c3249#request-cancellation-with-abortsignal">new AbortController().signal</a>
+      new AbortController().signal
     </td>
     <td>
       Use an <code>AbortController</code> instance to cancel a request. In node you can only cancel streamed requests.

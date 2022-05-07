@@ -6,11 +6,6 @@
     "streams": "https://deno.land/std@0.137.0/streams/mod.ts",
     "encoding/": "https://deno.land/std@0.137.0/encoding/",
     "node/": "https://deno.land/std@0.137.0/node/",
-    "@octokit/core": "https://cdn.skypack.dev/@octokit/core?dts",
-    "@octokit/plugin-rest-endpoint-methods": "https://cdn.skypack.dev/@octokit/plugin-rest-endpoint-methods?dts",
-    "@octokit/plugin-paginate-rest": "https://cdn.skypack.dev/@octokit/plugin-paginate-rest?dts",
-    "@octokit/webhooks-types": "https://cdn.skypack.dev/@octokit/webhooks-types?dts",
-    "@octokit/openapi-types": "https://cdn.skypack.dev/@octokit/openapi-types?dts",
     "compress/": "https://deno.land/x/compress@v0.3.3/"
   }
 }
