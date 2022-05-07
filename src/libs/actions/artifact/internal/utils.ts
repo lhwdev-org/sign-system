@@ -6,7 +6,7 @@ import {
   headersToRecord,
   HttpClient,
   HttpCodes,
-} from "../../http-client/index.ts";
+} from "../../../http-client/index.ts";
 
 import {
   getInitialRetryIntervalInMilliseconds,

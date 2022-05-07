@@ -1,6 +1,6 @@
 import { readableStreamFromReader } from "streams";
 import * as core from "../../core/core.ts";
-import { HttpCodes } from "../../http-client/index.ts";
+import { HttpCodes } from "../../../http-client/index.ts";
 
 import {
   ArtifactResponse,

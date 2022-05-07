@@ -1,5 +1,5 @@
 import { debug, setSecret } from "./core.ts";
-import { headersToRecord, HttpClient } from "../http-client/index.ts";
+import { headersToRecord, HttpClient } from "../../http-client/index.ts";
 interface TokenResponse {
   value?: string;
 }

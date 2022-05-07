@@ -37,6 +37,10 @@ export type HttpClient =
   ) => Promise<Response>)
   & { close: () => void };
 
+export const DefaultHttpClient: HttpClient = Object.assign({}, fetch, {
+  close() {},
+});
+
 export function getProxyClient(
   destinationUrl: string,
 ): HttpClient | undefined {

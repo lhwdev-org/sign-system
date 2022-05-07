@@ -6,7 +6,7 @@ import { Octokit } from "../../octokit/core/index.ts";
 import { OctokitOptions } from "../../octokit/core/types.ts";
 import { restEndpointMethods } from "../../octokit/plugin-rest-endpoint-methods/index.ts";
 import { paginateRest } from "../../octokit/plugin-paginate-rest/index.ts";
-import { getProxyClient } from "../http-client/index.ts";
+import { getProxyClient } from "../../http-client/index.ts";
 
 export const context = new Context.Context();
 

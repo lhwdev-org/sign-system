@@ -1,6 +1,7 @@
 import { isPlainObject } from "../util/is-plain-object.ts";
 import { RequestError } from "../request-error/index.ts";
 import { EndpointInterface } from "../types/index.ts";
+import { DefaultHttpClient, HttpClient } from "../../http-client/index.ts";
 
 export default function fetchWrapper(
   requestOptions: ReturnType<EndpointInterface> & {
@@ -20,7 +21,8 @@ export default function fetchWrapper(
   let status: number;
   let url: string;
 
-  const customFetch: typeof fetch = (requestOptions.request?.client) || fetch;
+  const customFetch: HttpClient = (requestOptions.request?.client) ||
+    DefaultHttpClient;
 
   return customFetch(
     requestOptions.url,

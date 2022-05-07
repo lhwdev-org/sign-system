@@ -1,4 +1,4 @@
-import { HttpClient } from "../../http-client/index.ts";
+import { HttpClient } from "../../../http-client/index.ts";
 import { createHttpClient } from "./utils.ts";
 
 /**

@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any ban-types
-import { HttpClient } from "../../actions/http-client/index.ts";
+import { HttpClient } from "../../http-client/index.ts";
 import { Route } from "./common.ts";
 import { EndpointDefaults, EndpointOptions } from "./endpoints.ts";
 import { RequestInterface, RequestParameters } from "./request.ts";
