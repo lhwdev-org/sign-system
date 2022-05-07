@@ -92,7 +92,8 @@ export class UploadHttpClient {
 
     const response = await retryHttpClientRequest(
       "Create Artifact Container",
-      async () => await client(artifactUrl, { body: data, headers }),
+      async () =>
+        await client(artifactUrl, { method: "POST", body: data, headers }),
       customErrorMessages,
     );
     return await response.json();

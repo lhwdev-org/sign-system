@@ -52,11 +52,11 @@ export class OidcClient {
   }
 
   private static async getCall(id_token_url: string): Promise<string> {
-    const httpclient = OidcClient.createHttpClient();
+    const httpClient = OidcClient.createHttpClient();
 
     let res;
     try {
-      res = await (await httpclient(id_token_url)).json() as TokenResponse;
+      res = await (await httpClient(id_token_url)).json() as TokenResponse;
     } catch (error) {
       throw new Error(
         `Failed to get ID Token. \n 
