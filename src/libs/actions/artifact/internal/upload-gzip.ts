@@ -61,18 +61,14 @@ export async function createGZipFileInBuffer(
 ): Promise<Buffer> {
   const input = await Deno.open(originalFilePath, { read: true });
   const gzip = new CompressionStream("gzip");
-  try {
-    const reader = input.readable.pipeThrough(gzip).getReader();
-    const buffer = new Buffer();
+  const reader = input.readable.pipeThrough(gzip).getReader();
+  const buffer = new Buffer();
 
-    while (true) {
-      const result = await reader.read();
-      if (result.done) break;
-      await buffer.write(result.value);
-    }
-
-    return buffer;
-  } finally {
-    input.close();
+  while (true) {
+    const result = await reader.read();
+    if (result.done) break;
+    await buffer.write(result.value);
   }
+
+  return buffer;
 }
