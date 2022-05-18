@@ -257,8 +257,8 @@ export function displayHttpDiagnostics(
     `##### Begin Diagnostic HTTP information #####
 Status Code: ${response.status}
 Status Message: ${response.statusText}
-Header Information: ${new Map(response.headers.entries())}${
-      body ? "\nBody: " + body : ""
+Header Information: ${Object.fromEntries(response.headers)}${
+      body !== undefined ? "\nBody: " + body : ""
     }
 ###### End Diagnostic HTTP information ######`,
   );
