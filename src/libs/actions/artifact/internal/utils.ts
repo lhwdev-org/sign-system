@@ -257,9 +257,9 @@ export function displayHttpDiagnostics(
     `##### Begin Diagnostic HTTP information #####
 Status Code: ${response.status}
 Status Message: ${response.statusText}
-Header Information: ${Object.fromEntries(response.headers)}${
-      body !== undefined ? "\nBody: " + body : ""
-    }
+Header Information: ${
+      JSON.stringify(Object.fromEntries(response.headers), undefined, 1)
+    }${body !== undefined ? "\nBody: " + body : ""}
 ###### End Diagnostic HTTP information ######`,
   );
 }
