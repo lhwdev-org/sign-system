@@ -512,7 +512,7 @@ export class UploadHttpClient {
 
       // Always read the body of the response. There is potential for a resource leak if the body is not read which will
       // result in the connection remaining open along with unintended consequences when trying to dispose of the client
-      await response.body?.cancel();
+      await response.text();
 
       if (isSuccessStatusCode(response.status)) {
         return true;
@@ -574,7 +574,7 @@ export class UploadHttpClient {
         }),
       customErrorMessages,
     );
-    await response.body?.cancel();
+    await response.text();
     core.debug(
       `Artifact ${artifactName} has been successfully uploaded, total size in bytes: ${size}`,
     );
