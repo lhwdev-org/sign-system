@@ -249,17 +249,19 @@ export function getArtifactUrl(): string {
  * Certain information such as the TLSSocket and the Readable state are not really useful for diagnostic purposes so they can be avoided.
  * Other information such as the headers, the response code and message might be useful, so this is displayed.
  */
-export function displayHttpDiagnostics(response: Response): void {
-  (async () => {
-    info(
-      `##### Begin Diagnostic HTTP information #####
+export function displayHttpDiagnostics(
+  response: Response,
+  body?: string,
+): void {
+  info(
+    `##### Begin Diagnostic HTTP information #####
 Status Code: ${response.status}
 Status Message: ${response.statusText}
-Header Information: ${new Map(response.headers.entries())}
-Body: ${await response.text()}
+Header Information: ${new Map(response.headers.entries())}${
+      body ? "\nBody: " + body : ""
+    }
 ###### End Diagnostic HTTP information ######`,
-    );
-  })();
+  );
 }
 
 export async function createDirectoriesForArtifact(

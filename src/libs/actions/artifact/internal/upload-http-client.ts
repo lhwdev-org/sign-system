@@ -512,7 +512,7 @@ export class UploadHttpClient {
 
       // Always read the body of the response. There is potential for a resource leak if the body is not read which will
       // result in the connection remaining open along with unintended consequences when trying to dispose of the client
-      await response.text();
+      const body = await response.text();
 
       if (isSuccessStatusCode(response.status)) {
         return true;
@@ -532,7 +532,7 @@ export class UploadHttpClient {
         core.error(
           `Unexpected response. Unable to upload chunk to ${resourceUrl}`,
         );
-        displayHttpDiagnostics(response);
+        displayHttpDiagnostics(response, body);
         return false;
       }
     }
