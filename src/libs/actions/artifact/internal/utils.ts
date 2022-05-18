@@ -250,15 +250,16 @@ export function getArtifactUrl(): string {
  * Other information such as the headers, the response code and message might be useful, so this is displayed.
  */
 export function displayHttpDiagnostics(response: Response): void {
-  info(
-    `##### Begin Diagnostic HTTP information #####
+  (async () => {
+    info(
+      `##### Begin Diagnostic HTTP information #####
 Status Code: ${response.status}
 Status Message: ${response.statusText}
-Header Information: ${
-      JSON.stringify(Array.from(response.headers), undefined, 2)
-    }
+Header Information: ${new Map(response.headers.entries())}
+Body: ${await response.text()}
 ###### End Diagnostic HTTP information ######`,
-  );
+    );
+  })();
 }
 
 export async function createDirectoriesForArtifact(
