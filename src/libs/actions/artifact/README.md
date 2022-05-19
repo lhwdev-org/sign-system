@@ -54,40 +54,40 @@ Method Name: `uploadArtifact`
 #### Example using Absolute File Paths
 
 ```js
-const artifact = require('@actions/artifact');
-const artifactClient = artifact.create()
+import * as artifact from '@actions/artifact';
+const artifactClient = artifact.create();
 const artifactName = 'my-artifact';
 const files = [
     '/home/user/files/plz-upload/file1.txt',
     '/home/user/files/plz-upload/file2.txt',
     '/home/user/files/plz-upload/dir/file3.txt'
-]
-const rootDirectory = '/home/user/files/plz-upload'
+];
+const rootDirectory = '/home/user/files/plz-upload';
 const options = {
     continueOnError: true
-}
+};
 
-const uploadResult = await artifactClient.uploadArtifact(artifactName, files, rootDirectory, options)
+const uploadResult = await artifactClient.uploadArtifact(artifactName, files, rootDirectory, options);
 ```
 
 #### Example using Relative File Paths
 ```js
 // Assuming the current working directory is /home/user/files/plz-upload
-const artifact = require('@actions/artifact');
-const artifactClient = artifact.create()
+import * as artifact from '@actions/artifact';
+const artifactClient = artifact.create();
 const artifactName = 'my-artifact';
 const files = [
     'file1.txt',
     'file2.txt',
     'dir/file3.txt'
-]
+];
 
-const rootDirectory = '.' // Also possible to use __dirname
+const rootDirectory = '.'; // Also possible to use __dirname
 const options = {
     continueOnError: false
-}
+};
 
-const uploadResponse = await artifactClient.uploadArtifact(artifactName, files, rootDirectory, options)
+const uploadResponse = await artifactClient.uploadArtifact(artifactName, files, rootDirectory, options);
 ```
 
 #### Upload Result
@@ -128,15 +128,15 @@ Method Name: `downloadArtifact`
 #### Example
 
 ```js
-const artifact = require('@actions/artifact');
-const artifactClient = artifact.create()
+import * as artifact from '@actions/artifact';
+const artifactClient = artifact.create();
 const artifactName = 'my-artifact';
-const path = 'some/directory'
+const path = 'some/directory';
 const options = {
     createArtifactFolder: false
-}
+};
 
-const downloadResponse = await artifactClient.downloadArtifact(artifactName, path, options)
+const downloadResponse = await artifactClient.downloadArtifact(artifactName, path, options);
 
 // Post download, the directory structure will look like this
 /some
@@ -176,7 +176,7 @@ Method Name: `downloadAllArtifacts`
     - Optional. Defaults to the GitHub workspace directory(`$GITHUB_WORKSPACE`) if not specified
 
 ```js
-const artifact = require('@actions/artifact');
+import * as artifact from '@actions/artifact';
 const artifactClient = artifact.create();
 const downloadResponse = await artifactClient.downloadAllArtifacts();
 
