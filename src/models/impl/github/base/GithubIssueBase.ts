@@ -121,7 +121,7 @@ export class GithubIssueCommentBase extends GithubModel
       comment_id: data.id,
     };
 
-    this.updateFrom;
+    this.updateFrom(data);
   }
 
   public get manager(): GithubModelManager {
